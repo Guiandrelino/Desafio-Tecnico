@@ -3,7 +3,14 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+_NIVEL_RISCO_CANONICO = {
+    "baixo": "baixo",
+    "medio": "médio",
+    "médio": "médio",
+    "alto": "alto",
+}
 
 
 class Parecer(BaseModel):
@@ -11,6 +18,16 @@ class Parecer(BaseModel):
     tipologia_suspeita: str
     red_flags: list[str] = Field(default_factory=list)
     justificativa: str
+
+    @field_validator("nivel_risco", mode="before")
+    @classmethod
+    def _normalizar_nivel_risco(cls, valor: str) -> str:
+        """Aceita 'medio' sem acento -- LLMs frequentemente omitem diacriticos."""
+        if isinstance(valor, str):
+            chave = valor.strip().lower()
+            if chave in _NIVEL_RISCO_CANONICO:
+                return _NIVEL_RISCO_CANONICO[chave]
+        return valor
 
 
 class ChamadaLLMMetrica(BaseModel):

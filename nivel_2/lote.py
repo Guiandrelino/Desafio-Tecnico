@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -13,13 +14,21 @@ from nivel_2.agente import gerar_parecer
 from nivel_2.config import OUTPUTS_DIR, PARECERES_DIR
 from nivel_2.top_clientes import top_10_clientes
 
+# A camada gratuita do Gemini limita requisicoes por minuto (observado na pratica
+# ao rodar este lote pela primeira vez -- ver docs/DECISOES.md). Cada cliente pode
+# custar varias chamadas (loop de tool-calling), entao espacamos entre clientes
+# alem do retry/backoff que ja existe dentro de llm_client.py.
+PAUSA_ENTRE_CLIENTES_S = 20
+
 
 def rodar_lote(usar_cache: bool = True) -> pd.DataFrame:
     top10, _ = top_10_clientes()
     PARECERES_DIR.mkdir(parents=True, exist_ok=True)
 
     linhas = []
-    for cliente_id in top10["cliente_id"]:
+    for i, cliente_id in enumerate(top10["cliente_id"]):
+        if i > 0:
+            time.sleep(PAUSA_ENTRE_CLIENTES_S)
         registro = gerar_parecer(cliente_id, usar_cache=usar_cache)
 
         with open(PARECERES_DIR / f"{cliente_id}.json", "w", encoding="utf-8") as f:

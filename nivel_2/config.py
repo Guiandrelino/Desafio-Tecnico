@@ -31,6 +31,6 @@ class LLMConfig:
 def get_llm_config() -> LLMConfig:
     return LLMConfig(
         provider=os.getenv("LLM_PROVIDER", "google-ai-studio"),
-        model=os.getenv("LLM_MODEL", "gemini-2.0-flash"),
+        model=os.getenv("LLM_MODEL", "gemini-flash-lite-latest"),
         api_key=os.getenv("GEMINI_API_KEY") or None,
     )

@@ -8,12 +8,64 @@ interface -- nao conhece detalhes do SDK.
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
 from nivel_2.config import LLMConfig
 from nivel_2.models import ChamadaLLMMetrica
+
+MAX_TENTATIVAS_RATE_LIMIT = 4
+_PADRAO_RETRY_DELAY = re.compile(r"retryDelay['\"]?:\s*['\"](\d+(?:\.\d+)?)s")
+
+
+def _e_erro_transitorio(exc: Exception) -> bool:
+    texto = str(exc)
+    return "RESOURCE_EXHAUSTED" in texto or "429" in texto or "UNAVAILABLE" in texto or "503" in texto
+
+
+def _e_quota_diaria_esgotada(exc: Exception) -> bool:
+    """Distingue rate limit por minuto (vale a pena esperar) de quota diaria
+    esgotada (retry dentro da sessao nao adianta -- so reseta no dia seguinte).
+
+    Achado na primeira execucao real do lote: o retryDelay sugerido pela API
+    (ex: "59s") e generico e aparece mesmo quando o quotaId e
+    "...PerDay...", caso em que esperar 59s e inutil. Ver docs/DECISOES.md.
+    """
+    return "PerDay" in str(exc)
+
+
+def _delay_sugerido(exc: Exception, tentativa: int) -> float:
+    """Usa o retryDelay que a API do Gemini sugere no corpo do erro 429, se houver."""
+    match = _PADRAO_RETRY_DELAY.search(str(exc))
+    if match:
+        return float(match.group(1)) + 1.0
+    return min(60.0, 10.0 * (2**tentativa))
+
+
+def _generate_com_retry(client, **kwargs):
+    """Chama generate_content com retry/backoff para erros transitorios (429/503).
+
+    A camada gratuita do Gemini tem limite de requisicoes por minuto E por dia
+    -- isso foi observado na primeira execucao real do lote (ver
+    docs/DECISOES.md). Quota diaria esgotada falha rapido (retry nao ajuda);
+    rate limit por minuto usa backoff com o retryDelay sugerido pela API.
+    """
+    ultimo_erro: Exception | None = None
+    for tentativa in range(MAX_TENTATIVAS_RATE_LIMIT):
+        try:
+            return client.models.generate_content(**kwargs)
+        except Exception as exc:  # noqa: BLE001
+            if (
+                not _e_erro_transitorio(exc)
+                or _e_quota_diaria_esgotada(exc)
+                or tentativa == MAX_TENTATIVAS_RATE_LIMIT - 1
+            ):
+                raise
+            ultimo_erro = exc
+            time.sleep(_delay_sugerido(exc, tentativa))
+    raise ultimo_erro  # pragma: no cover - inatingivel, mas satisfaz o type checker
 
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "historico_cliente": {
@@ -115,7 +167,8 @@ def executar_agente(
 
     try:
         for iteracao in range(1, max_iteracoes + 1):
-            resposta = client.models.generate_content(
+            resposta = _generate_com_retry(
+                client,
                 model=config.model,
                 contents=contents,
                 config=types.GenerateContentConfig(
