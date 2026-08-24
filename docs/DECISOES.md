@@ -230,6 +230,8 @@ Como as ferramentas do Nível 2 já estão separadas e possuem funções bem def
 
 A validação seria executar o mesmo conjunto de clientes através do MCP e comparar os resultados com a implementação atual.
 
+Plano detalhado (por que a Trilha B e não A/C, arquitetura com diagrama, passos e critério de validação): `nivel_3/README.md`.
+
 ## Conclusão
 
 As principais decisões do projeto buscaram manter uma separação clara entre **processamento determinístico e interpretação por IA**.
