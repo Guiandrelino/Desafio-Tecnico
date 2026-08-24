@@ -1,0 +1,20 @@
+{
+  "cliente_id": "CLI-023",
+  "parecer": null,
+  "nivel_risco_llm": null,
+  "ferramentas_utilizadas": [],
+  "qtd_chamadas_llm": 0,
+  "resposta_bruta": null,
+  "erro_validacao": null,
+  "metrica": {
+    "modelo": "gemini-2.0-flash",
+    "provedor": "google-ai-studio",
+    "tokens_entrada": null,
+    "tokens_saida": null,
+    "tokens_totais": null,
+    "tempo_resposta_s": 0.0,
+    "status": "erro",
+    "erro": "GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example."
+  },
+  "status": "erro"
+}

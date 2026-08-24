@@ -1,0 +1,11 @@
+cliente_id,status,nivel_risco_llm,tipologia_suspeita,qtd_red_flags,ferramentas_utilizadas,qtd_chamadas_llm,modelo,tokens_totais,tempo_resposta_s,erro
+CLI-029,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-023,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-017,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-030,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-002,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-024,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-003,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-028,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-013,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-014,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
