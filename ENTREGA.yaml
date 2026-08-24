@@ -1,0 +1,66 @@
+candidato: "[preencher nome]"
+modelo_usado: gemini-2.0-flash
+provedor: google-ai-studio
+horas_dedicadas: "[preencher]"
+
+nivel_1:
+  limpeza_dados:
+    status: completo
+    onde: "nivel_1/nivel_1.ipynb, células 5-13 (inspeção + limpeza), com explicação em markdown"
+  regras_pandas:
+    status: completo
+    onde: "nivel_1/nivel_1.ipynb, células 18-24 (Regra 1 e Regra 2)"
+  validacao_regras:
+    status: completo
+    onde: "nivel_1/nivel_1.ipynb, célula 21 (comparação caso positivo vs caso parecido, com asserts)"
+  saida_estruturada:
+    status: parcial
+    onde: "nivel_1/nivel_1.ipynb, células 31-33 (Pydantic Parecer + extrair_json + tratamento de erro/malformado)"
+    nota: >
+      O contrato Pydantic, a extração de JSON e o tratamento de erro/timeout/malformado
+      estão implementados e o caminho de erro (sem GEMINI_API_KEY) foi executado e
+      validado de verdade. O caminho de sucesso (validar uma resposta real do Gemini)
+      não foi exercitado nesta sessão por não haver uma API key disponível. Plano em
+      docs/DECISOES.md.
+  comparacao_prompts:
+    status: parcial
+    onde: "nivel_1/nivel_1.ipynb, células 34-40 (Prompt V1 e V2, executados sem chave)"
+    nota: >
+      As duas versões de prompt existem, são estruturalmente diferentes (V2 adiciona
+      separação fato/hipótese e proibição explícita de recálculo) e o notebook executa
+      as duas chamadas de verdade — mas sem GEMINI_API_KEY ambas retornam status "erro"
+      tratado, não uma resposta de conteúdo para comparar. Plano em docs/DECISOES.md#prompt-v1-vs-v2-nível-1-parte-b.
+
+nivel_2:
+  regras_em_escala:
+    status: completo
+    onde: "nivel_2/rules.py + nivel_2/top_clientes.py -> outputs/top_10_clientes.csv (gerado de verdade)"
+  ferramentas:
+    status: completo
+    onde: "nivel_2/tools.py (historico_cliente, operacoes_do_dia, perfil_canal), testado manualmente contra a base real"
+  agente:
+    status: parcial
+    onde: "nivel_2/agente.py, nivel_2/llm_client.py"
+    nota: >
+      Loop de tool-calling manual (não automático), limite de iterações, cache e
+      montagem de contexto estão implementados. Testado no caminho de erro (sem chave);
+      não testado contra uma resposta real do Gemini nesta sessão. Plano em docs/DECISOES.md.
+  lote:
+    status: parcial
+    onde: "nivel_2/lote.py -> outputs/lote.csv, outputs/pareceres/*.json"
+    nota: >
+      Pipeline roda de ponta a ponta sobre os 10 clientes do top10 e gera os arquivos
+      esperados; sem GEMINI_API_KEY, as 10 linhas saem com status "erro" e mensagem
+      explicativa (não é conteúdo inventado). Precisa reexecução com chave real.
+  confronto:
+    status: parcial
+    onde: "nivel_2/confronto.py -> outputs/confronto.csv"
+    nota: >
+      Baseline determinístico calculado corretamente para os 30 clientes; comparação
+      com o LLM não tem dados reais para comparar (0/30 avaliados com sucesso, pois
+      lote.csv está com status "erro" em todas as linhas). Plano em docs/DECISOES.md#confronto.
+
+nivel_3:
+  trilha_escolhida: B
+  status: nao_feito
+  plano: "docs/DECISOES.md#com-mais-tempo, item 4 (servidor MCP sobre nivel_2/tools.py)"
