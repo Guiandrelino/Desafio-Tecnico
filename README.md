@@ -20,24 +20,25 @@ risco e redação do parecer.
 
 ```
 dados/              dados_nivel_1.json e dados_nivel_2.json (fornecidos, não alterados)
-nivel_1/             nivel_1.ipynb — notebook do Nível 1 (Partes A e B), já executado
-nivel_2/             módulos Python reutilizáveis + regras em escala + agente + confronto
-  config.py           configuração via variáveis de ambiente
-  models.py           Parecer (Pydantic) e métricas de chamada LLM
-  data.py             carga e limpeza dos dados (mesma lógica do notebook, fatorada)
-  rules.py            Regra 1 (fracionamento) e Regra 2 (valor atípico) — só pandas
-  tools.py            3 ferramentas de consulta que o agente pode chamar
-  cache.py            cache em disco das respostas da LLM (por hash do prompt)
-  llm_client.py        integração com google-genai: loop de tool-calling, tokens, latência
-  agente.py            monta o contexto do cliente e decide quando chamar ferramentas
-  top_clientes.py      calcula os 10 clientes mais sinalizados -> outputs/top_10_clientes.csv
-  lote.py               roda o agente sobre os 10 clientes -> outputs/lote.csv + pareceres/
-  confronto.py          baseline determinístico vs parecer do agente -> outputs/confronto.csv
-nivel_3/             não implementado (ver docs/DECISOES.md)
-outputs/             resultados salvos (CSV, pareceres individuais, cache de LLM)
-tests/               testes das regras críticas (pytest)
-docs/                 DECISOES.md, USO_DE_IA.md
+nivel_1/            nivel_1.ipynb — notebook do Nível 1 (Partes A e B), já executado
+nivel_2/            estrutura obrigatória do desafio, sem arquivo auxiliar nenhum:
+  tools.py            "Python calcula": config/caminhos, carga+limpeza dos dados,
+                       Regra 1 (fracionamento), Regra 2 (valor atípico), top 10
+                       clientes, e as 3 ferramentas de consulta do agente
+  agente.py            "LLM interpreta": config da LLM, contrato Pydantic (Parecer),
+                       cache de respostas, cliente Gemini com tool-calling manual,
+                       montagem de contexto, geração do parecer e execução em lote
+  confronto.py         baseline determinístico vs parecer do agente -> outputs/confronto.csv
+nivel_3/            não implementado (ver docs/DECISOES.md)
+outputs/            resultados salvos (CSV, pareceres individuais, cache de LLM)
+tests/              testes das regras críticas e do contrato Pydantic (pytest)
+docs/               DECISOES.md, USO_DE_IA.md
 ```
+
+`nivel_2/` tem só os três arquivos que a estrutura do desafio pede. A separação que
+importa não é "quantos arquivos" e sim `tools.py` (tudo que é cálculo determinístico,
+reaproveitado pelo notebook do Nível 1) vs. `agente.py` (tudo que fala com a LLM) —
+ver `docs/DECISOES.md` para o raciocínio da consolidação.
 
 ## Instalação
 
@@ -74,8 +75,10 @@ a chave, elas rodam e mostram o tratamento de erro real, sem quebrar.
 **Nível 2**:
 
 ```bash
-python -m nivel_2.top_clientes   # gera outputs/top_10_clientes.csv
-python -m nivel_2.lote           # roda o agente sobre o top 10 -> outputs/lote.csv e outputs/pareceres/
+python -m nivel_2.tools          # gera outputs/top_10_clientes.csv
+python -m nivel_2.agente CLI-014 # debug: roda um unico cliente (--sem-cache p/ ignorar cache)
+python -m nivel_2.agente         # sem argumento: roda o lote completo sobre o top 10
+                                  # -> outputs/lote.csv e outputs/pareceres/
 python -m nivel_2.confronto      # compara baseline determinístico vs LLM -> outputs/confronto.csv
 ```
 

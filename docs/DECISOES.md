@@ -25,7 +25,7 @@ deles hipotético, todos encontrados rodando de verdade:**
    de novo", o que é certo para limite por minuto mas inútil para limite diário (o
    `retryDelay` sugerido pela API, ex: "59s", não tem relação com o reset diário — segui
    isso e desperdicei ~160s por cliente batendo na mesma parede). Corrigido em duas
-   frentes: `_e_quota_diaria_esgotada` em `nivel_2/llm_client.py` detecta `"PerDay"` na
+   frentes: `_e_quota_diaria_esgotada` em `nivel_2/agente.py` detecta `"PerDay"` na
    mensagem de erro e desiste rápido em vez de tentar de novo; e troquei o modelo para
    `gemini-flash-lite-latest`, que tem um bucket de quota separado (confirmado: os 10
    clientes rodaram com sucesso depois da troca, a maioria em poucos segundos).
@@ -33,12 +33,30 @@ deles hipotético, todos encontrados rodando de verdade:**
    `"médio"` — um parecer válido em conteúdo saiu classificado como `"malformado"` por
    causa de um detalhe puramente ortográfico que eu mesmo introduzi (o exemplo de JSON
    no system prompt usa `"baixo|medio|alto"` sem acento). Corrigido com um
-   `field_validator` em `nivel_2/models.py` que normaliza variações antes de validar
+   `field_validator` em `nivel_2/agente.py` (classe `Parecer`) que normaliza variações antes de validar
    (`tests/test_models.py` cobre isso). Ver `docs/USO_DE_IA.md` para mais contexto.
 
 Depois desses três ajustes, o notebook do Nível 1 (Parte B) e o lote completo do Nível 2
 (10/10 clientes) rodaram com sucesso contra a API real do Gemini — os números abaixo, nas
 seções de Prompt e Confronto, vêm dessa execução real, não de simulação.
+
+## Estrutura do nivel_2 (consolidação em 3 arquivos)
+
+O desafio define `nivel_2/tools.py`, `agente.py` e `confronto.py` como estrutura
+obrigatória. A primeira versão deste projeto adicionou arquivos auxiliares
+(`config.py`, `models.py`, `data.py`, `rules.py`, `cache.py`, `llm_client.py`,
+`top_clientes.py`, `lote.py`) — permitido pelo enunciado ("pode adicionar arquivos
+auxiliares quando fizer sentido"), mas depois de revisão optei por consolidar tudo de
+volta nos três arquivos obrigatórios, sem perder a separação lógica: `tools.py`
+concentra tudo que é cálculo determinístico (carga, limpeza, as duas regras, top 10
+clientes, e as três ferramentas de consulta) e `agente.py` concentra tudo que fala com
+a LLM (config, contrato Pydantic, cache, cliente Gemini, montagem de contexto, geração
+do parecer, execução em lote). `confronto.py` importa de `tools.py` (baseline) e lê o
+CSV que `agente.py` produz. A fronteira entre os arquivos ficou a mesma fronteira do
+projeto inteiro — "Python calcula, LLM interpreta" — só que expressa em nome de arquivo
+em vez de import entre módulos. `__init__.py` foi removido também (namespace package
+implícito do Python 3 funciona sem ele; confirmado rodando os testes e os três CLIs
+depois da mudança).
 
 ## Dados
 
@@ -57,7 +75,7 @@ porque o Nível 2 tem 322 linhas, inviável de conferir a olho.
 ### Por que remover só duplicatas 100% idênticas
 
 Um ID repetido com conteúdo diferente seria ambíguo (qual registro é o correto?) e não
-tem uma resposta determinística segura. `nivel_2/data.py` distingue os dois casos:
+tem uma resposta determinística segura. `nivel_2/tools.py` distingue os dois casos:
 duplicata exata é removida automaticamente; ID repetido com conteúdo diferente seria
 apenas logado como aviso para investigação manual. Neste dataset, todos os IDs
 duplicados encontrados eram duplicatas exatas — o caminho de "conteúdo diferente" existe
@@ -77,7 +95,7 @@ da base.
 Soma, contagem, mediana e comparação com limite são operações determinísticas com uma
 única resposta correta. Pedir para uma LLM "calcular" introduz risco de erro aritmético
 silencioso e, mais importante, torna o resultado não-reprodutível e não-auditável (dois
-runs podem dar respostas diferentes). `nivel_2/rules.py` não importa nada relacionado a
+runs podem dar respostas diferentes). A parte de regras em `nivel_2/tools.py` não importa nada relacionado a
 LLM — é pandas puro, testável com `pytest` sem custo e sem rede (ver `tests/test_rules.py`).
 
 Achado ao rodar `resumo_sinalizacoes_por_cliente` sobre o Nível 2: **nenhum dos 30
@@ -108,8 +126,8 @@ prompt de sistema — ver `nivel_1/nivel_1.ipynb`, células 36-37):
 | | V1 (fraco) | V2 (estruturado) |
 |---|---|---|
 | `nivel_risco` | **alto** | **médio** |
-| Linguagem da justificativa | "indica**ndo** forte indício de tentativa de burlar os controles" — trata o disparo da regra quase como prova | Separa explicitamente `FATO:` (o que a regra1 mostrou) de `HIPOTESE:` (a inferência), e fecha dizendo "as flags são apenas indícios estatísticos e não provas definitivas de ilicitude" |
-| Tokens | 790 | 1016 |
+| Linguagem da justificativa | "fortemente indicativo de tentativa de burlar controles internos... caracterizando forte suspeita de lavagem de dinheiro" — trata o disparo da regra quase como prova | Separa explicitamente `FATO:` (o que a regra mostrou) de `HIPOTESE:` (a inferência), termina pedindo "diligência ampliada para confirmar a licitude comercial" em vez de afirmar suspeita forte |
+| Tokens | 805 | 931 |
 
 A diferença bateu com a hipótese de desenho: V1, sem a instrução explícita de separar
 fato de hipótese, converteu uma flag estatística em quase-certeza e escalou o risco para
@@ -124,9 +142,9 @@ Três ferramentas, cada uma cobrindo uma dimensão diferente de evidência:
 `historico_cliente` (visão agregada), `operacoes_do_dia` (granularidade temporal, útil
 quando a Regra 1 disparou), `perfil_canal` (padrão de comportamento, útil para
 tipologias como uso concentrado de espécie/pix). O agente decide quais chamar — não há
-`for cliente: chama_tudo()` em lugar nenhum do código; `nivel_2/agente.py` só monta o
-contexto inicial e delega a decisão ao loop de tool-calling em `nivel_2/llm_client.py`,
-que só executa uma ferramenta quando o modelo pede.
+`for cliente: chama_tudo()` em lugar nenhum do código; `montar_contexto_cliente` só monta o
+contexto inicial e delega a decisão ao loop de tool-calling em `executar_agente`
+(ambos em `nivel_2/agente.py`), que só executa uma ferramenta quando o modelo pede.
 
 **Limite de iterações**: 5 (constante `MAX_ITERACOES_PADRAO`), para evitar loop
 infinito caso o modelo fique alternando entre ferramentas sem convergir. Se atingido,
@@ -198,14 +216,14 @@ jeito de pegar isso é ler a justificativa, não só olhar `nivel_risco`.
 - **Cache não expira** — se a base de dados mudar mas o `cliente_id` e o prompt
   ficarem iguais por coincidência (improvável, mas não impossível), o cache serviria uma
   resposta desatualizada. Não há TTL implementado.
-- **Sem paralelismo no lote** — `nivel_2/lote.py` roda os 10 clientes sequencialmente,
+- **Sem paralelismo no lote** — `rodar_lote` (em `nivel_2/agente.py`) roda os 10 clientes sequencialmente,
   o que é lento e mais sensível a rate limit da camada gratuita, mas mais simples de
   depurar e com progresso mais previsível.
 - **Sem retry automático em resposta malformada** — se o JSON vier malformado, o
   registro é marcado `status="malformado"` e segue para o próximo cliente, mas o
   próprio prompt não é reenviado automaticamente pedindo correção. (O normalizador de
-  acento em `nivel_2/models.py` cobre o caso mais comum encontrado na prática, mas não
-  substitui um retry real para outros tipos de malformação.)
+  acento na classe `Parecer` de `nivel_2/agente.py` cobre o caso mais comum encontrado
+  na prática, mas não substitui um retry real para outros tipos de malformação.)
 - **Quota diária gratuita é apertada para modelos maiores** — `gemini-3.6-flash` tem
   limite de 20 requisições/dia na camada gratuita, insuficiente para rodar o lote de 10
   clientes inteiro (cada cliente usa 2-4 chamadas). A solução final usa

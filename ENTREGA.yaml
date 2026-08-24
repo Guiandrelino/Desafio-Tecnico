@@ -19,8 +19,8 @@ nivel_1:
     nota: >
       Executado de verdade contra a API (GEMINI_API_KEY real). Um bug real foi
       encontrado e corrigido nesse processo: a LLM devolveu "medio" sem acento e o
-      Literal do Pydantic só aceitava "médio" -- corrigido com normalização em
-      nivel_2/models.py (ver docs/DECISOES.md e docs/USO_DE_IA.md).
+      Literal do Pydantic só aceitava "médio" -- corrigido com normalização na classe
+      Parecer em nivel_2/agente.py (ver docs/DECISOES.md e docs/USO_DE_IA.md).
   comparacao_prompts:
     status: completo
     onde: "nivel_1/nivel_1.ipynb, células 34-40 (Prompt V1 e V2, executados com resposta real)"
@@ -33,13 +33,13 @@ nivel_1:
 nivel_2:
   regras_em_escala:
     status: completo
-    onde: "nivel_2/rules.py + nivel_2/top_clientes.py -> outputs/top_10_clientes.csv (gerado de verdade)"
+    onde: "nivel_2/tools.py (regras + top_10_clientes) -> outputs/top_10_clientes.csv (gerado de verdade)"
   ferramentas:
     status: completo
     onde: "nivel_2/tools.py (historico_cliente, operacoes_do_dia, perfil_canal), testado contra a base real e via chamadas reais do agente"
   agente:
     status: completo
-    onde: "nivel_2/agente.py, nivel_2/llm_client.py"
+    onde: "nivel_2/agente.py"
     nota: >
       Loop de tool-calling manual, limite de iterações, cache e montagem de contexto
       implementados e testados com sucesso contra a API real (10/10 clientes do lote
@@ -48,7 +48,7 @@ nivel_2:
       e retry ingênuo que não distinguia os dois casos -- ver docs/DECISOES.md.
   lote:
     status: completo
-    onde: "nivel_2/lote.py -> outputs/lote.csv, outputs/pareceres/*.json"
+    onde: "nivel_2/agente.py (rodar_lote, `python -m nivel_2.agente`) -> outputs/lote.csv, outputs/pareceres/*.json"
     nota: "10/10 clientes com status ok, pareceres reais commitados."
   confronto:
     status: completo

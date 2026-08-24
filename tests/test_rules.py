@@ -15,8 +15,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from nivel_2.data import carregar_e_limpar, limpar_operacoes
-from nivel_2.rules import aplicar_regra_fracionamento, aplicar_regra_valor_atipico
+from nivel_2.tools import (
+    aplicar_regra_fracionamento,
+    aplicar_regra_valor_atipico,
+    carregar_e_limpar,
+    limpar_operacoes,
+)
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 

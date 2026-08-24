@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 from pydantic import ValidationError
 
-from nivel_2.models import Parecer
+from nivel_2.agente import Parecer
 
 
 @pytest.mark.parametrize("valor_entrada", ["medio", "médio", "MEDIO", " medio "])

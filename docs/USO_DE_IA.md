@@ -49,11 +49,12 @@ programação durante toda a sessão.
 - **Risco identificado a tempo, não um erro já cometido**: a primeira leitura do
   enunciado poderia levar a implementar o agente como um loop "para cada cliente, chama
   as três ferramentas sempre" — o enunciado é explícito que isso não conta como agente.
-  O desenho final (`nivel_2/agente.py` + `nivel_2/llm_client.py`) deixa a decisão de
-  quais ferramentas chamar inteiramente para o modelo, via tool-calling, evitando esse
-  atalho.
+  O desenho final (funções `montar_contexto_cliente` + `executar_agente` em
+  `nivel_2/agente.py`) deixa a decisão de quais ferramentas chamar inteiramente para o
+  modelo, via tool-calling, evitando esse atalho.
 - **Retry ingênuo em erro 429**: a primeira versão do retry/backoff em
-  `nivel_2/llm_client.py` tratava toda resposta 429 (RESOURCE_EXHAUSTED) da mesma forma
+  `nivel_2/agente.py` (na época, um módulo `llm_client.py` separado) tratava toda
+  resposta 429 (RESOURCE_EXHAUSTED) da mesma forma
   — esperar e tentar de novo. Rodando o lote de verdade, isso gastou minutos tentando de
   novo um limite que era **diário**, não por minuto (o corpo do erro dizia
   `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, mas o código só olhava o código

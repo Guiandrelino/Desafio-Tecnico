@@ -18,9 +18,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
-from nivel_2.config import DADOS_NIVEL_2, OUTPUTS_DIR
-from nivel_2.data import carregar_e_limpar
-from nivel_2.rules import aplicar_regras, resumo_sinalizacoes_por_cliente
+from nivel_2.tools import (
+    DADOS_NIVEL_2,
+    OUTPUTS_DIR,
+    aplicar_regras,
+    carregar_e_limpar,
+    resumo_sinalizacoes_por_cliente,
+)
 
 MAPA_BASELINE = {0: "baixo", 1: "médio", 2: "alto"}
 
@@ -45,7 +49,7 @@ def montar_confronto(lote_csv: Path | None = None) -> pd.DataFrame:
     lote_csv = lote_csv or (OUTPUTS_DIR / "lote.csv")
     if not lote_csv.exists():
         raise FileNotFoundError(
-            f"{lote_csv} nao encontrado. Rode 'python -m nivel_2.lote' primeiro."
+            f"{lote_csv} nao encontrado. Rode 'python -m nivel_2.agente' primeiro."
         )
     lote = pd.read_csv(lote_csv)
 
