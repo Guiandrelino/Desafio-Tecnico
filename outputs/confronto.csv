@@ -1,14 +1,14 @@
 cliente_id,qtd_regras_distintas,risco_deterministico,status,nivel_risco_llm,tipologia_suspeita,concorda
-CLI-029,1,médio,erro,,,False
-CLI-023,1,médio,erro,,,False
-CLI-017,1,médio,erro,,,False
-CLI-030,1,médio,erro,,,False
-CLI-002,1,médio,erro,,,False
-CLI-024,1,médio,erro,,,False
-CLI-003,1,médio,erro,,,False
-CLI-028,1,médio,erro,,,False
-CLI-013,1,médio,erro,,,False
-CLI-014,1,médio,erro,,,False
+CLI-029,1,médio,ok,médio,Fracionamento de transações (Smurfing),True
+CLI-023,1,médio,ok,médio,Movimentacao atipica de recursos com uso de especie e transferencia de alto valor,True
+CLI-017,1,médio,ok,médio,Fracionamento de operacoes para ocultacao de movimentacao,True
+CLI-030,1,médio,ok,baixo,Nenhuma tipologia conclusiva identificada,False
+CLI-002,1,médio,ok,médio,Fracionamento de operacoes para ocultacao de valores ou dispersao de fundos (Smurfing),True
+CLI-024,1,médio,ok,médio,Movimentacao atipica de valor elevado em TED,True
+CLI-003,1,médio,ok,médio,Fracionamento de operacoes para ocultacao de movimentacao financeira,True
+CLI-028,1,médio,ok,baixo,Nao aplicavel,False
+CLI-013,1,médio,ok,médio,Movimentacao de valores atipicos sem fracionamento evidente,True
+CLI-014,1,médio,ok,médio,Movimentacao atipica de valores elevados sem fracionamento evidente,True
 CLI-005,1,médio,,,,False
 CLI-022,1,médio,,,,False
 CLI-007,1,médio,,,,False

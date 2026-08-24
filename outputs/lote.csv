@@ -1,11 +1,11 @@
 cliente_id,status,nivel_risco_llm,tipologia_suspeita,qtd_red_flags,ferramentas_utilizadas,qtd_chamadas_llm,modelo,tokens_totais,tempo_resposta_s,erro
-CLI-029,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-023,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-017,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-030,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-002,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-024,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-003,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-028,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-013,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
-CLI-014,erro,,,,,0,gemini-2.0-flash,,0.0,GEMINI_API_KEY nao configurada. Preencha o .env a partir do .env.example.
+CLI-029,ok,médio,Fracionamento de transações (Smurfing),2,historico_cliente,2,gemini-flash-lite-latest,3262,11.366,
+CLI-023,ok,médio,Movimentacao atipica de recursos com uso de especie e transferencia de alto valor,3,historico_cliente;perfil_canal,3,gemini-flash-lite-latest,4208,44.097,
+CLI-017,ok,médio,Fracionamento de operacoes para ocultacao de movimentacao,2,operacoes_do_dia,2,gemini-flash-lite-latest,3132,39.837,
+CLI-030,ok,baixo,Nenhuma tipologia conclusiva identificada,1,historico_cliente,2,gemini-flash-lite-latest,2388,20.872,
+CLI-002,ok,médio,Fracionamento de operacoes para ocultacao de valores ou dispersao de fundos (Smurfing),2,historico_cliente,2,gemini-flash-lite-latest,3050,78.209,
+CLI-024,ok,médio,Movimentacao atipica de valor elevado em TED,1,historico_cliente;operacoes_do_dia,3,gemini-flash-lite-latest,3843,29.258,
+CLI-003,ok,médio,Fracionamento de operacoes para ocultacao de movimentacao financeira,2,operacoes_do_dia,2,gemini-flash-lite-latest,3202,3.175,
+CLI-028,ok,baixo,Nao aplicavel,1,historico_cliente,2,gemini-flash-lite-latest,2605,71.405,
+CLI-013,ok,médio,Movimentacao de valores atipicos sem fracionamento evidente,2,historico_cliente,2,gemini-flash-lite-latest,2604,11.599,
+CLI-014,ok,médio,Movimentacao atipica de valores elevados sem fracionamento evidente,2,historico_cliente,2,gemini-flash-lite-latest,2855,2.718,

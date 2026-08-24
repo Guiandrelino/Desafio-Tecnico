@@ -1,0 +1,33 @@
+{
+  "cliente_id": "CLI-030",
+  "parecer": {
+    "nivel_risco": "médio",
+    "tipologia_suspeita": "Movimentacao atipica de alto valor com origem transfronteirica/moeda estrangeira e uso de especie",
+    "red_flags": [
+      "Recebimento de transferencia atipica de R$ 77.628,19 (USD 14.375,59) via TED, desproporcional a mediana do cliente de R$ 4.611,07",
+      "Operacao em moeda estrangeira envolvendo pessoa juridica (Aurora Servicos SA)",
+      "Movimentacao em especie no valor total de R$ 10.779,35"
+    ],
+    "justificativa": "Fatos: O cliente realizou 9 operacoes no periodo com volume total de R$ 117.780,89 e valor mediano de R$ 4.611,07. Disparou a regra de valor atipico na operacao OP-00313 (R$ 77.628,19 recebidos da pessoa juridica Aurora Servicos SA em USD via TED). Alem disso, movimentou R$ 10.779,35 em especie (22,2% das operacoes). Nao houve disparo da regra de fracionamento. Hipoteses: A operacao recebida e significativamente superior ao historico transacional do cliente e envolve moeda estrangeira, o que sugere potencial incompatibilidade com o perfil transacional basico, agravado pelo uso simultaneo de especie. Recomenda-se solicitar esclarecimentos e lastro documental sobre a origem dos recursos da operacao internacional."
+  },
+  "nivel_risco_llm": "médio",
+  "ferramentas_utilizadas": [
+    "historico_cliente",
+    "perfil_canal",
+    "operacoes_do_dia"
+  ],
+  "qtd_chamadas_llm": 3,
+  "resposta_bruta": "{\"nivel_risco\": \"medio\", \"tipologia_suspeita\": \"Movimentacao atipica de alto valor com origem transfronteirica/moeda estrangeira e uso de especie\", \"red_flags\": [\"Recebimento de transferencia atipica de R$ 77.628,19 (USD 14.375,59) via TED, desproporcional a mediana do cliente de R$ 4.611,07\", \"Operacao em moeda estrangeira envolvendo pessoa juridica (Aurora Servicos SA)\", \"Movimentacao em especie no valor total de R$ 10.779,35\"], \"justificativa\": \"Fatos: O cliente realizou 9 operacoes no periodo com volume total de R$ 117.780,89 e valor mediano de R$ 4.611,07. Disparou a regra de valor atipico na operacao OP-00313 (R$ 77.628,19 recebidos da pessoa juridica Aurora Servicos SA em USD via TED). Alem disso, movimentou R$ 10.779,35 em especie (22,2% das operacoes). Nao houve disparo da regra de fracionamento. Hipoteses: A operacao recebida e significativamente superior ao historico transacional do cliente e envolve moeda estrangeira, o que sugere potencial incompatibilidade com o perfil transacional basico, agravado pelo uso simultaneo de especie. Recomenda-se solicitar esclarecimentos e lastro documental sobre a origem dos recursos da operacao internacional.\"}",
+  "erro_validacao": null,
+  "metrica": {
+    "modelo": "gemini-3.6-flash",
+    "provedor": "google-ai-studio",
+    "tokens_entrada": 4474,
+    "tokens_saida": 448,
+    "tokens_totais": 4922,
+    "tempo_resposta_s": 15.436,
+    "status": "ok",
+    "erro": null
+  },
+  "status": "ok"
+}

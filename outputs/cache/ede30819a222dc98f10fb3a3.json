@@ -1,0 +1,33 @@
+{
+  "cliente_id": "CLI-029",
+  "parecer": {
+    "nivel_risco": "médio",
+    "tipologia_suspeita": "Fracionamento de operacoes (structuring) e movimentacao via conta de passagem",
+    "red_flags": [
+      "Concentracao de 4 operacoes em um unico dia (26/05/2026) somando R$ 71.297,68",
+      "Disparo da regra deterministica de fracionamento",
+      "Movimentacao simultanea de entradas e saidas de recursos envolvendo multiplas empresas no mesmo dia"
+    ],
+    "justificativa": "Fatos: O cliente acumula R$ 191.385,77 em 16 operacoes entre marco e maio de 2026. No dia 26/05/2026, realizou 4 transacoes via TED e PIX totalizando R$ 71.297,68 (cerca de 37% do volume total do cliente), envolvendo transacoes com Rubi Importacao ME, Solar Importacao LTDA, Orion Trading SA e Cristal Atacado ME, acionando a regra deterministica de fracionamento. Hipoteses: A rapidez nas entradas e saidas concentradas em uma unica data com empresas comerciais levanta hipotese de uso da conta como passagem e tentativa de fracionamento de recursos. Recomenda-se monitoramento preventivo e analise do perfil cadastral."
+  },
+  "nivel_risco_llm": "médio",
+  "ferramentas_utilizadas": [
+    "historico_cliente",
+    "operacoes_do_dia",
+    "perfil_canal"
+  ],
+  "qtd_chamadas_llm": 3,
+  "resposta_bruta": "{\"nivel_risco\": \"medio\", \"tipologia_suspeita\": \"Fracionamento de operacoes (structuring) e movimentacao via conta de passagem\", \"red_flags\": [\"Concentracao de 4 operacoes em um unico dia (26/05/2026) somando R$ 71.297,68\", \"Disparo da regra deterministica de fracionamento\", \"Movimentacao simultanea de entradas e saidas de recursos envolvendo multiplas empresas no mesmo dia\"], \"justificativa\": \"Fatos: O cliente acumula R$ 191.385,77 em 16 operacoes entre marco e maio de 2026. No dia 26/05/2026, realizou 4 transacoes via TED e PIX totalizando R$ 71.297,68 (cerca de 37% do volume total do cliente), envolvendo transacoes com Rubi Importacao ME, Solar Importacao LTDA, Orion Trading SA e Cristal Atacado ME, acionando a regra deterministica de fracionamento. Hipoteses: A rapidez nas entradas e saidas concentradas em uma unica data com empresas comerciais levanta hipotese de uso da conta como passagem e tentativa de fracionamento de recursos. Recomenda-se monitoramento preventivo e analise do perfil cadastral.\"}",
+  "erro_validacao": null,
+  "metrica": {
+    "modelo": "gemini-3.6-flash",
+    "provedor": "google-ai-studio",
+    "tokens_entrada": 5984,
+    "tokens_saida": 390,
+    "tokens_totais": 6374,
+    "tempo_resposta_s": 20.441,
+    "status": "ok",
+    "erro": null
+  },
+  "status": "ok"
+}
