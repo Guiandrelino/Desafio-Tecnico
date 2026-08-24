@@ -54,9 +54,13 @@ Copie `.env.example` para `.env` e preencha com uma chave gratuita do
 
 ```
 LLM_PROVIDER=google-ai-studio
-LLM_MODEL=gemini-2.0-flash
+LLM_MODEL=gemini-flash-lite-latest
 GEMINI_API_KEY=sua-chave-aqui
 ```
+
+`gemini-flash-lite-latest` é o modelo usado na execução real do lote (ver seção
+"Modelo utilizado" abaixo) — tem quota gratuita separada de `gemini-3.6-flash` e se
+mostrou suficiente para os 10 clientes do Nível 2.
 
 Nenhuma chave é lida de outro lugar e nenhuma chave está commitada neste repositório.
 
@@ -86,40 +90,46 @@ pytest tests/ -v
 
 ## Modelo utilizado
 
-Google AI Studio, `gemini-2.0-flash` (camada gratuita). Escolhido por ter tool calling e
-saída estruturada nativos via SDK `google-genai`, e por não exigir cartão de crédito.
+Google AI Studio / Gemini (camada gratuita). O lote real do Nível 2 e a execução final
+do notebook do Nível 1 rodaram em `gemini-flash-lite-latest`. `gemini-3.6-flash` também
+foi testado com sucesso (usado nos 3 primeiros clientes antes de esbarrar na quota
+diária gratuita, bem mais apertada nesse modelo — ver `docs/DECISOES.md`). Escolhidos
+por terem tool calling e saída estruturada nativos via SDK `google-genai`, e por não
+exigirem cartão de crédito.
 
 ## Estado real da execução com LLM
 
-Este projeto foi desenvolvido sem uma `GEMINI_API_KEY` disponível na sessão de
-desenvolvimento (decisão consciente registrada em `docs/DECISOES.md`). Isso significa:
+Todo o projeto foi executado de ponta a ponta contra a API real do Gemini, incluindo as
+partes que dependem de LLM — não é simulação. No processo, três problemas reais
+apareceram e foram corrigidos (modelo desativado, quota diária vs. por minuto, e um bug
+de validação de acentuação); estão documentados com detalhe em `docs/DECISOES.md` e
+`docs/USO_DE_IA.md`.
 
-- **Tudo que é cálculo em pandas está executado de verdade e commitado**: limpeza de
-  dados, conversão de moeda, agregações, Regra 1, Regra 2, validação das regras,
-  `outputs/top_10_clientes.csv`.
-- **Tudo que depende de chamada real à LLM está com o código completo, testado no
-  caminho de erro, mas ainda não executado com uma resposta real do modelo** — as
-  células/scripts capturam a ausência de chave e reportam `status: "erro"` de forma
-  limpa, sem inventar conteúdo. `outputs/lote.csv`, `outputs/pareceres/*.json` e
-  `outputs/confronto.csv` presentes neste repositório refletem exatamente essa
-  execução sem chave (10/10 registros com status "erro" e mensagem explicativa).
-- Para obter resultados reais, preencha `.env` com uma chave gratuita e rode
-  `nivel_1/nivel_1.ipynb` e os três comandos do Nível 2 novamente — nenhuma outra
-  mudança de código é necessária.
+- `nivel_1/nivel_1.ipynb`: Parte A (pandas) e Parte B (LLM, prompts V1 e V2) executadas
+  de verdade, saídas commitadas.
+- `outputs/top_10_clientes.csv`: cálculo determinístico, 100% pandas.
+- `outputs/lote.csv` e `outputs/pareceres/*.json`: **10/10 clientes com status "ok"**,
+  pareceres reais do agente.
+- `outputs/confronto.csv`: **10/10 avaliados, taxa de concordância real de 80% (8/10)**.
+  As 2 divergências foram analisadas caso a caso em `docs/DECISOES.md#confronto`.
 
-Isso está declarado com honestidade em `ENTREGA.yaml` (itens de LLM marcados como
-`parcial`, nunca `completo`).
+## Principais resultados
 
-## Principais resultados (parte determinística, validada)
-
-- **Nível 1**: 1 duplicata exata removida (`OP-0007`), 1 operação sem data preservada
-  com flag `data_ausente`, 1 operação em USD convertida corretamente. Regra 1 captura
-  CLI-A-1 (2026-03-09) e corretamente não captura o caso parecido CLI-A-3
+- **Nível 1 (dados)**: 1 duplicata exata removida (`OP-0007`), 1 operação sem data
+  preservada com flag `data_ausente`, 1 operação em USD convertida corretamente. Regra 1
+  captura CLI-A-1 (2026-03-09) e corretamente não captura o caso parecido CLI-A-3
   (2026-03-05, soma abaixo do limite). Regra 2 captura a remessa internacional de
   CLI-A-4 (`OP-0013`).
-- **Nível 2**: 322 operações brutas → 317 após remover 5 duplicatas exatas (10 linhas
-  envolvidas); 30 clientes. Nenhum cliente disparou as duas regras ao mesmo tempo neste
-  dataset — ponto discutido em `docs/DECISOES.md`.
+- **Nível 1 (LLM)**: mesmo cliente e mesmos fatos, prompt V1 (fraco) classificou como
+  risco **alto** tratando a flag quase como prova; prompt V2 (estruturado) classificou
+  como **médio**, separando explicitamente fato de hipótese na justificativa.
+- **Nível 2 (dados)**: 322 operações brutas → 317 após remover 5 duplicatas exatas (10
+  linhas envolvidas); 30 clientes. Nenhum cliente disparou as duas regras ao mesmo tempo
+  neste dataset.
+- **Nível 2 (confronto)**: 80% de concordância entre baseline determinístico e agente.
+  Numa divergência (CLI-030) o agente parece mais correto que a regra (outlier isolado,
+  sem padrão de estruturação); na outra (CLI-028) o baseline parece mais defensável
+  (agente subponderou um padrão de entrada/saída de valores parecidos no mesmo dia).
 
 ## Limitações
 

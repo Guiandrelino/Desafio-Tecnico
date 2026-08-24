@@ -1,5 +1,5 @@
 candidato: "[preencher nome]"
-modelo_usado: gemini-2.0-flash
+modelo_usado: "gemini-flash-lite-latest (nivel_2, lote real) / gemini-3.6-flash e gemini-flash-lite-latest (nivel_1, testados)"
 provedor: google-ai-studio
 horas_dedicadas: "[preencher]"
 
@@ -14,22 +14,21 @@ nivel_1:
     status: completo
     onde: "nivel_1/nivel_1.ipynb, célula 21 (comparação caso positivo vs caso parecido, com asserts)"
   saida_estruturada:
-    status: parcial
-    onde: "nivel_1/nivel_1.ipynb, células 31-33 (Pydantic Parecer + extrair_json + tratamento de erro/malformado)"
+    status: completo
+    onde: "nivel_1/nivel_1.ipynb, células 31-33 e 36-37 (Pydantic Parecer + extrair_json + chamada real ao Gemini)"
     nota: >
-      O contrato Pydantic, a extração de JSON e o tratamento de erro/timeout/malformado
-      estão implementados e o caminho de erro (sem GEMINI_API_KEY) foi executado e
-      validado de verdade. O caminho de sucesso (validar uma resposta real do Gemini)
-      não foi exercitado nesta sessão por não haver uma API key disponível. Plano em
-      docs/DECISOES.md.
+      Executado de verdade contra a API (GEMINI_API_KEY real). Um bug real foi
+      encontrado e corrigido nesse processo: a LLM devolveu "medio" sem acento e o
+      Literal do Pydantic só aceitava "médio" -- corrigido com normalização em
+      nivel_2/models.py (ver docs/DECISOES.md e docs/USO_DE_IA.md).
   comparacao_prompts:
-    status: parcial
-    onde: "nivel_1/nivel_1.ipynb, células 34-40 (Prompt V1 e V2, executados sem chave)"
+    status: completo
+    onde: "nivel_1/nivel_1.ipynb, células 34-40 (Prompt V1 e V2, executados com resposta real)"
     nota: >
-      As duas versões de prompt existem, são estruturalmente diferentes (V2 adiciona
-      separação fato/hipótese e proibição explícita de recálculo) e o notebook executa
-      as duas chamadas de verdade — mas sem GEMINI_API_KEY ambas retornam status "erro"
-      tratado, não uma resposta de conteúdo para comparar. Plano em docs/DECISOES.md#prompt-v1-vs-v2-nível-1-parte-b.
+      V1 classificou o cliente CLI-A-1 como risco "alto" com linguagem que trata a
+      flag quase como prova; V2, mesmos fatos, classificou como "médio" e separou
+      explicitamente FATO de HIPÓTESE na justificativa -- diferença de conteúdo real,
+      documentada em docs/DECISOES.md#prompt-v1-vs-v2-nível-1-parte-b.
 
 nivel_2:
   regras_em_escala:
@@ -37,28 +36,29 @@ nivel_2:
     onde: "nivel_2/rules.py + nivel_2/top_clientes.py -> outputs/top_10_clientes.csv (gerado de verdade)"
   ferramentas:
     status: completo
-    onde: "nivel_2/tools.py (historico_cliente, operacoes_do_dia, perfil_canal), testado manualmente contra a base real"
+    onde: "nivel_2/tools.py (historico_cliente, operacoes_do_dia, perfil_canal), testado contra a base real e via chamadas reais do agente"
   agente:
-    status: parcial
+    status: completo
     onde: "nivel_2/agente.py, nivel_2/llm_client.py"
     nota: >
-      Loop de tool-calling manual (não automático), limite de iterações, cache e
-      montagem de contexto estão implementados. Testado no caminho de erro (sem chave);
-      não testado contra uma resposta real do Gemini nesta sessão. Plano em docs/DECISOES.md.
+      Loop de tool-calling manual, limite de iterações, cache e montagem de contexto
+      implementados e testados com sucesso contra a API real (10/10 clientes do lote
+      com status "ok"). Dois problemas reais de camada gratuita foram encontrados e
+      corrigidos ao vivo: quota diária (não por minuto) esgotada em gemini-3.6-flash,
+      e retry ingênuo que não distinguia os dois casos -- ver docs/DECISOES.md.
   lote:
-    status: parcial
+    status: completo
     onde: "nivel_2/lote.py -> outputs/lote.csv, outputs/pareceres/*.json"
-    nota: >
-      Pipeline roda de ponta a ponta sobre os 10 clientes do top10 e gera os arquivos
-      esperados; sem GEMINI_API_KEY, as 10 linhas saem com status "erro" e mensagem
-      explicativa (não é conteúdo inventado). Precisa reexecução com chave real.
+    nota: "10/10 clientes com status ok, pareceres reais commitados."
   confronto:
-    status: parcial
+    status: completo
     onde: "nivel_2/confronto.py -> outputs/confronto.csv"
     nota: >
-      Baseline determinístico calculado corretamente para os 30 clientes; comparação
-      com o LLM não tem dados reais para comparar (0/30 avaliados com sucesso, pois
-      lote.csv está com status "erro" em todas as linhas). Plano em docs/DECISOES.md#confronto.
+      10/10 clientes do top10 avaliados. Taxa de concordância real: 80% (8/10).
+      As 2 divergências (CLI-030, CLI-028) foram analisadas qualitativamente em
+      docs/DECISOES.md#confronto -- uma favorece o agente (regra com falso positivo
+      plausível), a outra favorece o baseline (agente subponderou um padrão de
+      entrada/saída no mesmo dia).
 
 nivel_3:
   trilha_escolhida: B

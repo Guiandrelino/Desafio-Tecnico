@@ -3,20 +3,42 @@
 Este documento explica trade-offs, limitações e o que seria feito com mais tempo. O
 código já mostra *o quê* foi feito — aqui está o *porquê*.
 
-## Contexto importante: execução sem `GEMINI_API_KEY`
+## Contexto: desenvolvido sem chave, depois executado de verdade
 
 Decisão consciente, tomada no início do desenvolvimento: construir a solução inteira
-(incluindo o código de integração com a LLM) sem ter uma chave de API disponível na
-sessão de desenvolvimento, e deixá-la pronta para rodar assim que uma chave gratuita for
-adicionada ao `.env`. A alternativa — pedir a chave antes de escrever qualquer linha de
-código — atrasaria todo o trabalho de regras/dados, que não depende disso.
+(incluindo o código de integração com a LLM) sem ter uma chave de API disponível, e
+deixá-la pronta para rodar assim que uma chave gratuita fosse adicionada ao `.env`. A
+alternativa — pedir a chave antes de escrever qualquer linha de código — atrasaria todo o
+trabalho de regras/dados, que não depende disso. O caminho de erro (sem chave) foi
+testado nessa fase e ficou registrado em commits anteriores.
 
-**Consequência honesta:** as células/scripts que chamam a LLM foram testadas no caminho
-de erro (sem chave), não no caminho de sucesso. O tratamento de JSON malformado, retry
-implícito via cache, extração de tokens/latência etc. seguem a documentação do SDK
-`google-genai`, mas não foram validados contra uma resposta real do Gemini. Isso está
-refletido com honestidade em `ENTREGA.yaml` — nenhum item que depende de chamada real à
-LLM está declarado como `completo`.
+**Depois, com a chave real, três problemas apareceram na primeira execução — nenhum
+deles hipotético, todos encontrados rodando de verdade:**
+
+1. **`gemini-2.0-flash` está desativado.** A API respondeu 404 dizendo para usar
+   `gemini-3.6-flash`. Ajustado no `.env`.
+2. **A camada gratuita tem limite tanto por minuto quanto por dia**, e o limite diário
+   (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, 20 requisições/dia) é bem mais
+   apertado para `gemini-3.6-flash` do que eu esperava — cada cliente do lote consome de
+   2 a 4 chamadas (loop de tool-calling), então 20/dia dá para uns 5-6 clientes no
+   máximo. O primeiro retry/backoff que escrevi tratava todo 429 como "esperar e tentar
+   de novo", o que é certo para limite por minuto mas inútil para limite diário (o
+   `retryDelay` sugerido pela API, ex: "59s", não tem relação com o reset diário — segui
+   isso e desperdicei ~160s por cliente batendo na mesma parede). Corrigido em duas
+   frentes: `_e_quota_diaria_esgotada` em `nivel_2/llm_client.py` detecta `"PerDay"` na
+   mensagem de erro e desiste rápido em vez de tentar de novo; e troquei o modelo para
+   `gemini-flash-lite-latest`, que tem um bucket de quota separado (confirmado: os 10
+   clientes rodaram com sucesso depois da troca, a maioria em poucos segundos).
+3. **A LLM devolveu `"medio"` sem acento**, mas o `Literal` do Pydantic só aceitava
+   `"médio"` — um parecer válido em conteúdo saiu classificado como `"malformado"` por
+   causa de um detalhe puramente ortográfico que eu mesmo introduzi (o exemplo de JSON
+   no system prompt usa `"baixo|medio|alto"` sem acento). Corrigido com um
+   `field_validator` em `nivel_2/models.py` que normaliza variações antes de validar
+   (`tests/test_models.py` cobre isso). Ver `docs/USO_DE_IA.md` para mais contexto.
+
+Depois desses três ajustes, o notebook do Nível 1 (Parte B) e o lote completo do Nível 2
+(10/10 clientes) rodaram com sucesso contra a API real do Gemini — os números abaixo, nas
+seções de Prompt e Confronto, vêm dessa execução real, não de simulação.
 
 ## Dados
 
@@ -78,10 +100,23 @@ pelo modelo.
 
 V1 é deliberadamente mais fraco: não distingue fato de hipótese, não proíbe
 recálculo/invenção, não define o contrato JSON com o mesmo rigor. V2 adiciona essas
-quatro restrições explicitamente. A comparação de *conteúdo* das duas respostas depende
-de execução real (ver seção acima) — o que está validado é que a diferença de *desenho*
-existe e é a esperada segundo a literatura de prompt engineering (instruções negativas
-explícitas reduzem alucinação e mistura de fato/hipótese).
+quatro restrições explicitamente.
+
+**Resultado real** (mesmo cliente, CLI-A-1, mesmos fatos, único cliente que muda é o
+prompt de sistema — ver `nivel_1/nivel_1.ipynb`, células 36-37):
+
+| | V1 (fraco) | V2 (estruturado) |
+|---|---|---|
+| `nivel_risco` | **alto** | **médio** |
+| Linguagem da justificativa | "indica**ndo** forte indício de tentativa de burlar os controles" — trata o disparo da regra quase como prova | Separa explicitamente `FATO:` (o que a regra1 mostrou) de `HIPOTESE:` (a inferência), e fecha dizendo "as flags são apenas indícios estatísticos e não provas definitivas de ilicitude" |
+| Tokens | 790 | 1016 |
+
+A diferença bateu com a hipótese de desenho: V1, sem a instrução explícita de separar
+fato de hipótese, converteu uma flag estatística em quase-certeza e escalou o risco para
+"alto"; V2, com a mesma evidência, foi mais comedido e explicitou o raciocínio. Isso não
+prova que V2 está "certo" e V1 "errado" em abstrato — mas mostra que o desenho do prompt
+muda a conclusão de risco com os mesmos dados, o que é exatamente o ponto de ter as duas
+versões.
 
 ## Agente (Nível 2)
 
@@ -114,9 +149,38 @@ regra (ex: "o fracionamento aconteceu mas as três operações são para a mesma
 contraparte recorrente há meses, típico de um fornecedor fixo, não de estruturação"),
 essa divergência é um sinal de que o agente está agregando valor, não errando.
 
-Sem execução real da LLM, este documento não pode apresentar exemplos concretos de
-divergência — ver `outputs/confronto.csv` para o estado atual (0 avaliações com
-sucesso) e a seção "Com mais tempo" abaixo para o plano.
+**Resultado real** (10/10 clientes do top10 avaliados com sucesso pelo agente, ver
+`outputs/confronto.csv` e `outputs/lote.csv`): taxa de concordância de **80% (8/10)**.
+Todos os 10 clientes têm baseline "médio" (nenhum disparou as duas regras ao mesmo
+tempo, como já registrado na seção de Regras). As 2 divergências, ambas o agente
+puxando o risco para baixo:
+
+- **CLI-030** — baseline "médio" (1 operação de valor atípico: uma TED recebida de
+  R$ 77.628,19 contra uma mediana de R$ 4.611,07 do cliente). O agente foi para
+  "baixo", justificando que é um evento **isolado**, sem padrão de fracionamento, e
+  levantou a hipótese de "venda de ativo ou recebimento extraordinário". **Avaliação:**
+  argumento defensável — a Regra 2 é um detector de outlier estatístico puro, sem
+  contexto sobre a natureza da contraparte ou do tipo de operação, e é conhecida por
+  gerar falso positivo em clientes com poucas operações e um recebimento grande e
+  legítimo (13º salário, herança, venda de bem). O agente não inventou nenhum fato para
+  chegar lá — usou exatamente a mesma evidência do baseline, só ponderou diferente.
+- **CLI-028** — baseline "médio" (2 operações de valor atípico no mesmo dia,
+  2026-03-21: uma recebida de R$ 24.875,39 e uma enviada de R$ 27.715,48, ambas via TED).
+  O agente também foi para "baixo". **Avaliação: aqui o baseline parece mais defensável
+  que o agente.** Um recebimento e um envio de valores parecidos no mesmo dia é um
+  padrão clássico de conta de passagem (dinheiro entra e sai rápido, quase sem
+  permanência) — um analista humano provavelmente pediria mais evidência antes de
+  descartar o caso, não o contrário. O agente descreveu esse padrão corretamente no
+  "FATO" da justificativa, mas na "HIPÓTESE" não deu peso ao timing simultâneo
+  entrada/saída, tratando as duas operações como eventos comerciais pontuais
+  independentes. É o tipo de divergência que uma revisão humana deveria pegar antes de
+  um caso ser baixado de risco — evidência de que "o agente discorda com boa
+  justificativa" não é sinônimo de "o agente está certo": aqui a boa redação mascarou um
+  raciocínio que não considerou o sinal mais forte do próprio fato que ele citou.
+
+Isso ilustra o ponto central do enunciado: a regra determinística gera falsos positivos
+(CLI-030 é um caso legítimo de flag simplista demais), mas o agente também erra — e o
+jeito de pegar isso é ler a justificativa, não só olhar `nivel_risco`.
 
 ## Limitações
 
@@ -139,15 +203,27 @@ sucesso) e a seção "Com mais tempo" abaixo para o plano.
   depurar e com progresso mais previsível.
 - **Sem retry automático em resposta malformada** — se o JSON vier malformado, o
   registro é marcado `status="malformado"` e segue para o próximo cliente, mas o
-  próprio prompt não é reenviado automaticamente pedindo correção.
+  próprio prompt não é reenviado automaticamente pedindo correção. (O normalizador de
+  acento em `nivel_2/models.py` cobre o caso mais comum encontrado na prática, mas não
+  substitui um retry real para outros tipos de malformação.)
+- **Quota diária gratuita é apertada para modelos maiores** — `gemini-3.6-flash` tem
+  limite de 20 requisições/dia na camada gratuita, insuficiente para rodar o lote de 10
+  clientes inteiro (cada cliente usa 2-4 chamadas). A solução final usa
+  `gemini-flash-lite-latest`, que tem quota separada e se mostrou suficiente, mas isso é
+  uma característica da conta/modelo no momento do desenvolvimento (2026-08), não uma
+  garantia permanente — um projeto real precisaria de um plano pago ou de lógica de
+  fallback entre modelos.
+- **Um dos 10 clientes do top10 não tem tipologia "conclusiva"** (CLI-030 e CLI-028
+  ficaram como "baixo" pelo agente) — ver análise em Confronto acima; não é bug, é uma
+  divergência real que vale revisão humana.
 
 ## Com mais tempo
 
-1. **Executar de fato com uma `GEMINI_API_KEY` real**: rodar o notebook e os três
-   comandos do Nível 2, revisar as respostas reais (tipologia, red flags, justificativa),
-   e usar isso para calibrar o prompt V2 (provavelmente precisaria de 1-2 iterações após
-   ver respostas reais). Validação: comparar 3-5 pareceres manualmente contra o que um
-   analista humano diria, olhando para as mesmas evidências.
+1. **Revisar o caso CLI-028 com um analista humano de verdade**: a divergência
+   documentada em Confronto (entrada e saída de valores parecidos no mesmo dia, agente
+   classificou como "baixo") é exatamente o tipo de caso que deveria ir para revisão
+   manual antes de aceitar a conclusão do agente. Validação: comparar o parecer do
+   agente com o de um analista PLD real sobre o mesmo caso.
 2. **Retry com correção guiada em resposta malformada**: ao detectar JSON inválido,
    reenviar ao modelo o erro específico de validação do Pydantic e pedir só a correção,
    em vez de descartar a tentativa. Validação: injetar uma resposta malformada

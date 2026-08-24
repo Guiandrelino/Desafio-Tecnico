@@ -22,10 +22,11 @@ programação durante toda a sessão.
 - **Provedor de LLM**: Google AI Studio / Gemini, escolhido entre as opções sugeridas no
   enunciado (Gemini, Groq, OpenRouter, Ollama).
 - **Momento de configurar a API key**: decidido explicitamente que a chave seria
-  configurada pelo usuário depois, fora da sessão de desenvolvimento — isso significa
-  que as partes do projeto que chamam a LLM de verdade não foram validadas com uma
-  resposta real durante o desenvolvimento (ver `docs/DECISOES.md` para o que isso
-  implica em cada entregável).
+  configurada pelo usuário depois — o código de integração com a LLM foi escrito e
+  testado no caminho de erro primeiro, sem chave. O usuário forneceu a chave mais tarde,
+  na mesma sessão, e a partir daí notebook e lote foram reexecutados de verdade contra a
+  API (ver `docs/DECISOES.md`, que documenta os três problemas reais encontrados nessa
+  execução: modelo desativado, quota diária, e um bug de acentuação na validação).
 - **Escopo do Nível 3**: decidido não implementar, para não comprometer a qualidade dos
   Níveis 1 e 2, conforme a própria recomendação do enunciado do desafio.
 
@@ -51,3 +52,30 @@ programação durante toda a sessão.
   O desenho final (`nivel_2/agente.py` + `nivel_2/llm_client.py`) deixa a decisão de
   quais ferramentas chamar inteiramente para o modelo, via tool-calling, evitando esse
   atalho.
+- **Retry ingênuo em erro 429**: a primeira versão do retry/backoff em
+  `nivel_2/llm_client.py` tratava toda resposta 429 (RESOURCE_EXHAUSTED) da mesma forma
+  — esperar e tentar de novo. Rodando o lote de verdade, isso gastou minutos tentando de
+  novo um limite que era **diário**, não por minuto (o corpo do erro dizia
+  `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, mas o código só olhava o código
+  HTTP). Corrigido para checar `"PerDay"` na mensagem e desistir rápido nesse caso, e
+  para trocar de modelo (`gemini-flash-lite-latest`, quota separada) em vez de insistir
+  no mesmo. Sem rodar contra a API real, esse bug nunca teria aparecido.
+- **`nivel_risco` malformado por um detalhe que eu mesmo criei**: o `Literal` do
+  Pydantic exigia `"médio"` com acento, mas o exemplo de JSON dentro do próprio system
+  prompt (escrito por mim) usava `"baixo|medio|alto"` sem acento — a LLM seguiu o
+  exemplo do prompt à risca e a validação rejeitou uma resposta perfeitamente boa. Só
+  apareceu ao rodar contra a API de verdade (`CLI-029`, primeiro teste do agente).
+  Corrigido normalizando a variação no modelo em vez de mudar o prompt (mais robusto:
+  não depende da LLM nunca errar o acento de novo).
+
+## Um risco de segurança pego a tempo (não foi a IA que errou)
+
+Ao colar a chave de API para eu rodar o projeto, o usuário editou `.env.example` em vez
+de `.env` — ou seja, a chave real ficou por um instante num arquivo que é rastreado pelo
+Git e vai para o repositório público. Antes de qualquer commit, a IA conferiu
+`git status`/`git log` para confirmar que a mudança ainda não tinha sido commitada, moveu
+a chave para `.env` (no `.gitignore`), restaurou `.env.example` ao estado original (sem
+valores) e só então seguiu em frente. Fica registrado aqui porque é exatamente o tipo de
+deslize que o enunciado trata como eliminatório ("chave commitada é incidente de
+segurança") — vale conferir sempre `git diff`/`git status` antes de comitar quando se
+mexe em arquivos de configuração.
