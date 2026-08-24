@@ -1,7 +1,7 @@
-candidato: "[preencher nome]"
+candidato: "Guilherme Araujo Andrelino"
 modelo_usado: "gemini-flash-lite-latest (nivel_2, lote real) / gemini-3.6-flash e gemini-flash-lite-latest (nivel_1, testados)"
 provedor: google-ai-studio
-horas_dedicadas: "[preencher]"
+horas_dedicadas: "8 horas"
 
 nivel_1:
   limpeza_dados:
